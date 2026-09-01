@@ -13,6 +13,7 @@ class OpenAILLMAdapter:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.model = model
         self.base_url = base_url or "https://api.openai.com/v1"
+        self.last_error: str | None = None
 
     def is_available(self) -> bool:
         return bool(self.api_key)
@@ -49,10 +50,15 @@ class OpenAILLMAdapter:
             "response_format": {"type": "json_object"},
         }
 
-        resp = requests.post(f"{self.base_url}/chat/completions", headers=headers, json=payload, timeout=60)
-        resp.raise_for_status()
-        content = resp.json()["choices"][0]["message"]["content"]
-        return self._parse_response(content)
+        try:
+            resp = requests.post(f"{self.base_url}/chat/completions", headers=headers, json=payload, timeout=60)
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"]
+            self.last_error = None
+            return self._parse_response(content)
+        except Exception as exc:
+            self.last_error = str(exc)
+            raise
 
     def _build_prompt(self, question: str, evidence: List[Dict[str, str]], graph: List[Dict[str, Any]]) -> str:
         evidence_block = "\n".join(f"- {item['source']}: {item['text']}" for item in evidence)
@@ -66,7 +72,12 @@ class OpenAILLMAdapter:
         )
 
     def _parse_response(self, raw: str) -> Dict[str, Any]:
-        parsed = __import__("json").loads(raw)
+        try:
+            parsed = __import__("json").loads(raw)
+        except Exception as exc:
+            self.last_error = str(exc)
+            raise ValueError(f"Model returned invalid JSON: {exc}") from exc
+
         return {
             "answer": parsed.get("answer", "Insufficient evidence to answer this confidently."),
             "facts": parsed.get("facts", []),

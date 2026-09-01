@@ -11,13 +11,16 @@ class LLMAdapter:
 
     def __init__(self, api_key: str | None = None, model: str = "gpt-4o-mini", base_url: str | None = None):
         self.model = OpenAILLMAdapter(api_key=api_key, model=model, base_url=base_url)
+        self.last_error: str | None = None
 
     def generate_structured_answer(self, question: str, evidence: List[Dict[str, str]], graph: List[Dict[str, Any]], uncertainty: bool = False) -> Dict[str, Any]:
         if self.model.is_available():
             try:
-                return self.model.generate(question, evidence, graph, uncertainty)
-            except Exception:
-                pass
+                response = self.model.generate(question, evidence, graph, uncertainty)
+                self.last_error = None
+                return response
+            except Exception as exc:
+                self.last_error = str(exc)
 
         if not evidence and not graph:
             return {

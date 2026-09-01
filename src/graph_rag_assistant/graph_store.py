@@ -66,18 +66,36 @@ class GraphStore:
     def query(self, question: str) -> List[dict]:
         q = question.lower()
         results = []
+        seen = set()
         relevant_nodes = [node for node in self.graph.nodes if node.lower() in q]
         if not relevant_nodes:
             candidate_terms = ["apollo 11", "apollo 12", "apollo 13", "apollo 14", "apollo 15", "apollo 16", "apollo 17", "neil armstrong", "moon", "fra mauro", "ronald evans", "lunar roving vehicle"]
             relevant_nodes = [node for node in self.graph.nodes if any(term in node.lower() for term in candidate_terms if term in q)]
+
         for node in relevant_nodes:
-            for neighbor, data in self.graph[node].items():
-                results.append({
-                    "source": node,
+            for source, target, data in self.graph.in_edges(node, data=True):
+                item = {
+                    "source": source,
                     "relation": data["relation"],
-                    "target": neighbor,
+                    "target": target,
                     "evidence": data["evidence"],
-                })
+                }
+                key = (item["source"], item["relation"], item["target"])
+                if key not in seen:
+                    seen.add(key)
+                    results.append(item)
+
+            for source, target, data in self.graph.out_edges(node, data=True):
+                item = {
+                    "source": source,
+                    "relation": data["relation"],
+                    "target": target,
+                    "evidence": data["evidence"],
+                }
+                key = (item["source"], item["relation"], item["target"])
+                if key not in seen:
+                    seen.add(key)
+                    results.append(item)
         return results
 
     def query_related(self, entity: str, max_depth: int = 2) -> List[Tuple[str, str, str]]:
