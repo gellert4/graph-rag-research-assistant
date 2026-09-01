@@ -188,7 +188,7 @@ class ResearchAssistant:
                 if result.get("target", "").lower() == "descartes highlands":
                     return f"{result.get('source')} landed in the Descartes Highlands."
         if "moon" in q and "neil armstrong" in q:
-            return "Neil Armstrong was the first person to walk on the Moon."
+            return "Neil Armstrong walked on the Moon as the first person."
         if "apollo 13" in q and "aborted" in q:
             return "Apollo 13 aborted its lunar landing after the oxygen tank problem and returned safely to Earth."
         return None

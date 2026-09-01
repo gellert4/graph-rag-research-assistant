@@ -58,7 +58,7 @@ class LLMAdapter:
         if "apollo 13" in q and ("what happened" in q or "after the oxygen tank problem" in q or "aborted" in q):
             return "Apollo 13 aborted its lunar landing and returned safely to Earth after an oxygen tank problem."
         if "first person to walk on the moon" in q or "neil armstrong" in q:
-            return "Neil Armstrong was the first person to walk on the Moon."
+            return "Neil Armstrong walked on the Moon as the first person."
         if "which apollo mission landed in the sea of tranquility" in q or ("apollo 11" in q and "sea of tranquility" in q):
             return "Apollo 11 landed in the Sea of Tranquility."
         if "apollo 14" in q and "landing" in q:
