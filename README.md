@@ -104,8 +104,8 @@ python tests/eval_questions.py
 Actual output from the last successful run:
 
 ```text
-6 passed in 3.76s
-Summary: 10/10 passed
+6 passed in 3.43s
+Summary: 11/11 passed
 ```
 
 ## Data sources
