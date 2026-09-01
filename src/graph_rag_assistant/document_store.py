@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
-from graph_rag_assistant.config import DATA_DIR
+from graph_rag_assistant.config import DOCUMENTS_DIR
 
 
 @dataclass
@@ -13,16 +13,18 @@ class DocumentChunk:
     source: str
     text: str
     chunk_index: int
+    title: str = ""
+    metadata: dict | None = None
 
 
 class DocumentStore:
-    def __init__(self, data_dir: Path | str = DATA_DIR / "apollo_docs"):
+    def __init__(self, data_dir: Path | str = DOCUMENTS_DIR):
         self.data_dir = Path(data_dir)
         self.documents = self._load_documents()
 
     def _load_documents(self) -> List[DocumentChunk]:
         chunks: List[DocumentChunk] = []
-        doc_paths = sorted(self.data_dir.glob("*.txt")) if self.data_dir.exists() else []
+        doc_paths = sorted(self.data_dir.rglob("*.txt")) if self.data_dir.exists() else []
         for doc_path in doc_paths:
             text = doc_path.read_text(encoding="utf-8")
             split = self._segment_text(text)
@@ -33,6 +35,12 @@ class DocumentStore:
                         source=doc_path.name,
                         text=segment,
                         chunk_index=idx,
+                        title=doc_path.stem.replace("_", " ").title(),
+                        metadata={
+                            "source_file": str(doc_path),
+                            "publisher": "NASA",
+                            "source_type": "prompt_text",
+                        },
                     )
                 )
         return chunks

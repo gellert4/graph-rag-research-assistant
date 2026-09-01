@@ -13,7 +13,7 @@ class Retriever:
         self.doc_texts = [doc.text for doc in documents]
         self.matrix = self.vectorizer.fit_transform(self.doc_texts) if self.doc_texts else None
 
-    def retrieve(self, question: str, top_k: int = 3):
+    def retrieve(self, question: str, top_k: int = 3, score_threshold: float = 0.08):
         if not self.documents or self.matrix is None:
             return []
         query_vector = self.vectorizer.transform([question])
@@ -21,6 +21,6 @@ class Retriever:
         ranked_indices = sims.argsort()[::-1]
         results = []
         for idx in ranked_indices[:top_k]:
-            if sims[idx] > 0:
-                results.append(self.documents[int(idx)])
+            if sims[idx] >= score_threshold:
+                results.append((self.documents[int(idx)], float(sims[idx])))
         return results
