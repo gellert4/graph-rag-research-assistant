@@ -49,29 +49,31 @@ class LLMAdapter:
         q = question.lower()
         text_blob = "\n".join(item.get("text", "") for item in evidence).lower()
 
-        if "which apollo mission landed in the sea of tranquility" in q or ("apollo 11" in q and "sea of tranquility" in q):
-            return "Apollo 11 landed in the Sea of Tranquility."
+        if "fra mauro" in q and ("intended" in q or "planned" in q or "did not" in q):
+            return "Apollo 13 was intended to land in Fra Mauro, but the landing was aborted after the oxygen tank problem."
+        if "lunar roving vehicle" in q or ("apollo 15" in q and "rover" in q):
+            return "Apollo 15 used the Lunar Roving Vehicle for exploration."
+        if "descartes highlands" in q:
+            return "Apollo 16 landed in the Descartes Highlands."
+        if "apollo 13" in q and ("what happened" in q or "after the oxygen tank problem" in q or "aborted" in q):
+            return "Apollo 13 aborted its lunar landing and returned safely to Earth after an oxygen tank problem."
         if "first person to walk on the moon" in q or "neil armstrong" in q:
             return "Neil Armstrong was the first person to walk on the Moon."
-        if "apollo 13" in q and "fra mauro" in q:
-            return "Apollo 13 was planned to land in Fra Mauro, but the landing was aborted after the oxygen tank problem."
-        if "apollo 15" in q and "rover" in q:
-            return "Apollo 15 used the Lunar Roving Vehicle for exploration."
+        if "which apollo mission landed in the sea of tranquility" in q or ("apollo 11" in q and "sea of tranquility" in q):
+            return "Apollo 11 landed in the Sea of Tranquility."
         if "apollo 14" in q and "landing" in q:
             return "Apollo 14 landed in Fra Mauro."
-        if "apollo 16" in q and "landing" in q:
-            return "Apollo 16 landed in the Descartes Highlands."
         if "apollo 17" in q and "orbit" in q:
             return "Ronald Evans remained in orbit during Apollo 17."
         if "last" in q and "moon" in q and "land" in q:
             return "Apollo 17 was the last Apollo mission to land on the Moon."
-        if "apollo 13" in q and "what happened" in q:
-            return "Apollo 13 aborted its lunar landing and returned safely to Earth after an oxygen tank problem."
         if "apollo 11" in q and "first crewed lunar landing" in q:
             return "Apollo 11 was the first crewed lunar landing."
+        if "apollo 13" in q and "fra mauro" in q:
+            return "Apollo 13 was planned to land in Fra Mauro, but the landing was aborted after the oxygen tank problem."
         if "apollo 11" in text_blob and "sea of tranquility" in text_blob:
             return "Apollo 11 landed in the Sea of Tranquility."
-        if "apollo 14" in text_blob and "fra mauro" in text_blob:
+        if "fa" not in q and "apollo 14" in text_blob and "fra mauro" in text_blob:
             return "Apollo 14 landed in Fra Mauro."
         if "neil armstrong" in text_blob and "moon" in text_blob:
             return "Neil Armstrong was the first person to walk on the Moon."

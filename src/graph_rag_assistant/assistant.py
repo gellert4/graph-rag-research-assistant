@@ -92,12 +92,12 @@ class ResearchAssistant:
                 }
 
         graph_answer = self._graph_answer_from_question(question, graph_results)
-        if graph_answer and question_terms and not any(term.lower() in direct_text for term in question_terms):
+        if graph_answer:
             return {
                 "answer": graph_answer,
                 "source_evidence": direct_facts,
                 "graph_relations": graph_results,
-                "inference": "The answer is derived from graph relations that match the question, even when the literal question text is not repeated verbatim in the evidence.",
+                "inference": "The answer is derived from graph relations that match the question and the mission/location context in the corpus.",
                 "uncertainty": False,
                 "contradictions": [],
                 "confidence": 0.8,
