@@ -1,0 +1,3 @@
+Mission Control at NASA was responsible for monitoring the Apollo missions in near-real time. The control team helped coordinate launch, orbital operations, lunar surface activity, and safe return procedures. Apollo 13 became a famous example of Mission Control's role in problem solving under pressure.
+
+The success of the missions depended on disciplined operations, communication, and rapid decision-making. Mission Control was an essential part of the Apollo architecture and a core component of mission safety.
