@@ -11,10 +11,10 @@ class Retriever:
         self.documents = documents
         self.vectorizer = TfidfVectorizer(stop_words="english")
         self.doc_texts = [doc.text for doc in documents]
-        self.matrix = self.vectorizer.fit_transform(self.doc_texts)
+        self.matrix = self.vectorizer.fit_transform(self.doc_texts) if self.doc_texts else None
 
     def retrieve(self, question: str, top_k: int = 3):
-        if not self.documents:
+        if not self.documents or self.matrix is None:
             return []
         query_vector = self.vectorizer.transform([question])
         sims = cosine_similarity(query_vector, self.matrix).flatten()

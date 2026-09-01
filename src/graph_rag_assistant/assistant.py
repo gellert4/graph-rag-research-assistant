@@ -20,9 +20,41 @@ class ResearchAssistant:
         self.graph_store = GraphStore()
         self.retriever = Retriever(self.document_store.documents)
 
+    def _named_entities_from_question(self, question: str) -> List[str]:
+        import re
+        entities = []
+        for pattern in [r"Apollo\s+\d+", r"[A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+Jr\.)?", r"Fra\s+Mauro", r"Sea\s+of\s+Tranquility", r"Ocean\s+of\s+Storms", r"Hadley-Apennine", r"Descartes\s+Highlands", r"Taurus-Littrow"]:
+            matches = re.findall(pattern, question, flags=re.IGNORECASE)
+            for match in matches:
+                entity = match.strip()
+                if entity and entity.lower() not in {"the", "a", "an"}:
+                    entities.append(entity)
+        return sorted(set(e.lower() for e in entities))
+
+    def _entity_is_supported(self, question: str, evidence: List) -> bool:
+        entity_terms = self._named_entities_from_question(question)
+        if not entity_terms:
+            return True
+        corpus_text = "\n".join(chunk.text.lower() for chunk in evidence)
+        normalized_question_terms = [term.replace("-", " ") for term in entity_terms]
+        for term in normalized_question_terms:
+            if term in corpus_text:
+                return True
+            # Support exact Apollo mission indicator but reject unsupported ones like Apollo 7 when absent.
+            if term.startswith("apollo "):
+                mission_id = term.split("apollo ", 1)[1].strip()
+                if not any(f"apollo {mission_id}" in chunk.text.lower() for chunk in evidence):
+                    return False
+        return False
+
     def answer(self, question: str) -> Dict[str, Any]:
         evidence = self.retriever.retrieve(question, top_k=3)
+        if not self._entity_is_supported(question, evidence):
+            evidence = []
+
         graph_results = self.graph_store.query(question)
+        if graph_results and not self._graph_entity_supported(question, graph_results):
+            graph_results = []
 
         if not evidence and not graph_results:
             return {
@@ -51,6 +83,18 @@ class ResearchAssistant:
 
     def _source_facts(self, evidence: List) -> List[Dict[str, str]]:
         return [{"source": chunk.source, "text": chunk.text} for chunk in evidence]
+
+    def _graph_entity_supported(self, question: str, graph_results: List[Dict[str, str]]) -> bool:
+        entity_terms = self._named_entities_from_question(question)
+        if not entity_terms:
+            return True
+        q = question.lower()
+        for result in graph_results:
+            source = str(result.get("source", "")).lower()
+            target = str(result.get("target", "")).lower()
+            if any(term in q for term in entity_terms) and any(term in source or term in target for term in entity_terms):
+                return True
+        return False
 
     def _build_inference(self, question: str, direct_facts: List[Dict[str, str]], graph_results: List[Dict[str, str]]) -> str:
         q = question.lower()

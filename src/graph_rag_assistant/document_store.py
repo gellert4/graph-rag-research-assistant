@@ -16,13 +16,14 @@ class DocumentChunk:
 
 
 class DocumentStore:
-    def __init__(self, data_dir: Path | str = DATA_DIR):
+    def __init__(self, data_dir: Path | str = DATA_DIR / "apollo_docs"):
         self.data_dir = Path(data_dir)
         self.documents = self._load_documents()
 
     def _load_documents(self) -> List[DocumentChunk]:
         chunks: List[DocumentChunk] = []
-        for doc_path in sorted(self.data_dir.glob("*.txt")):
+        doc_paths = sorted(self.data_dir.glob("*.txt")) if self.data_dir.exists() else []
+        for doc_path in doc_paths:
             text = doc_path.read_text(encoding="utf-8")
             split = self._segment_text(text)
             for idx, segment in enumerate(split):
