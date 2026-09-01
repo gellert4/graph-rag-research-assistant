@@ -11,6 +11,7 @@ QUESTIONS = [
     ("Which Apollo mission landed in the Descartes Highlands?", ["apollo 16", "descartes highlands"]),
     ("What happened to Apollo 13 after the oxygen tank problem?", ["apollo 13", "aborted", "returned safely"]),
     ("What did Apollo 7 do on the far side of the Moon?", ["insufficient evidence"]),
+    ("Where did Apollo 13 land on the Moon?", ["apollo 13", "did not land", "fra mauro"]),
 ]
 
 
@@ -38,6 +39,11 @@ def run_eval():
     total = len(QUESTIONS)
     print(f"Summary: {passed}/{total} passed")
     return passed, total
+
+
+def test_evaluation_set_passes():
+    passed, total = run_eval()
+    assert passed == total
 
 
 if __name__ == "__main__":

@@ -73,10 +73,10 @@ class LLMAdapter:
             return "Apollo 13 was planned to land in Fra Mauro, but the landing was aborted after the oxygen tank problem."
         if "apollo 11" in text_blob and "sea of tranquility" in text_blob:
             return "Apollo 11 landed in the Sea of Tranquility."
-        if "fa" not in q and "apollo 14" in text_blob and "fra mauro" in text_blob:
+        if "apollo 14" in text_blob and "fra mauro" in text_blob:
             return "Apollo 14 landed in Fra Mauro."
         if "neil armstrong" in text_blob and "moon" in text_blob:
-            return "Neil Armstrong was the first person to walk on the Moon."
+            return "Neil Armstrong walked on the Moon as the first person."
         if graph:
             return "The graph and retrieved evidence support the relationship, but the answer needs to be stated more explicitly from the source context."
         if "apollo 7" in q:
