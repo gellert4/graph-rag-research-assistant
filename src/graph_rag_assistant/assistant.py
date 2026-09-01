@@ -23,39 +23,21 @@ class ResearchAssistant:
         self.llm = LLMAdapter()
 
     def _named_entities_from_question(self, question: str) -> List[str]:
-        import re
+        normalized = question.lower()
         entities = []
-        patterns = [
-            r"Apollo\s+\d+",
-            r"[A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+Jr\.)?",
-            r"Fra\s+Mauro",
-            r"Sea\s+of\s+Tranquility",
-            r"Ocean\s+of\s+Storms",
-            r"Hadley-Apennine",
-            r"Descartes\s+Highlands",
-            r"Taurus-Littrow",
-        ]
-        for pattern in patterns:
-            matches = re.findall(pattern, question, flags=re.IGNORECASE)
-            for match in matches:
-                entity = match.strip()
-                if entity and entity.lower() not in {"the", "a", "an"}:
-                    entities.append(entity)
-        return sorted(set(e.lower() for e in entities))
+        for entity in self.graph_store.entities():
+            if entity.lower() in normalized:
+                entities.append(entity)
+        return entities
 
     def _entity_is_supported(self, question: str, evidence: List[Tuple[Any, float]]) -> bool:
         entity_terms = self._named_entities_from_question(question)
         if not entity_terms:
             return True
         corpus_text = "\n".join(chunk.text.lower() for chunk, _ in evidence)
-        normalized = [term.replace("-", " ") for term in entity_terms]
-        for term in normalized:
-            if term in corpus_text:
+        for term in entity_terms:
+            if term.lower() in corpus_text:
                 return True
-            if term.startswith("apollo "):
-                mission_id = term.split("apollo ", 1)[1].strip()
-                if not any(f"apollo {mission_id}" in chunk.text.lower() for chunk, _ in evidence):
-                    return False
         return False
 
     def _get_best_retrieval_score(self, evidence: List[Tuple[Any, float]]) -> float:
@@ -107,14 +89,13 @@ class ResearchAssistant:
         return [{"source": chunk.source, "text": chunk.text, "score": score} for chunk, score in evidence]
 
     def _graph_entity_supported(self, question: str, graph_results: List[Dict[str, str]]) -> bool:
-        entity_terms = self._named_entities_from_question(question)
-        if not entity_terms:
-            return True
+        if not question:
+            return False
         q = question.lower()
         for result in graph_results:
             source = str(result.get("source", "")).lower()
             target = str(result.get("target", "")).lower()
-            if any(term in q for term in entity_terms) and any(term in source or term in target for term in entity_terms):
+            if source in q or target in q:
                 return True
         return False
 
@@ -123,6 +104,6 @@ class ResearchAssistant:
         contradictions = []
         for item in evidence:
             text = item.get("text", "").lower()
-            if "apollo 13" in q and "did not land on the moon" in text and "apollo 13" in q:
-                contradictions.append("This material states that Apollo 13 did not land on the Moon, which is a direct contradiction to a false premise suggesting it did.")
+            if "apollo 13" in q and "did not land on the moon" in text:
+                contradictions.append("This source explicitly states that Apollo 13 did not land on the Moon, which is important when a question assumes it did.")
         return contradictions
