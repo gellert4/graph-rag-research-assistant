@@ -1,61 +1,69 @@
 # GraphRAG Research Assistant
 
-A small, explainable research assistant built for a controlled Apollo mission knowledge base. The goal is not to fake a massive production system, but to show how a practical LLM-style workflow can be designed: document retrieval, graph reasoning, evidence separation, uncertainty handling, and evaluation.
+This project implements a compact Apollo research assistant that blends retrieval, graph traversal, and grounded answer generation. The goal is to show how a practical LLM-style workflow can be designed in a small but realistic setting: source documents are retrieved, related entities are checked in a graph, and a final answer is produced only when the evidence supports it.
 
-## What this project demonstrates
+## What the system demonstrates
 
-- RAG-style document retrieval over a small curated corpus
-- structured entity graph with relationships like mission → landing site, crew member → mission, person → Moon
-- clear separation between source evidence, graph relations, and model inference
-- explicit uncertainty handling when the answer is not supported by the data
-- an evaluation set of realistic research questions
+- document-backed RAG over a curated corpus of Apollo mission materials
+- a lightweight NetworkX knowledge graph for mission-to-location and person-to-mission relations
+- separation of source evidence, graph relations, and final reasoning
+- explicit abstention when the evidence is weak or missing
+- a small evaluation suite to check answer quality on realistic questions
 
 ## Architecture
 
 1. Corpus layer
-   - The project uses a small set of Apollo mission text files under `data/apollo_docs/`.
-   - Each file is treated as a source document and split into natural paragraphs.
+   - The program loads Apollo-related text files from `data/apollo_docs/`.
+   - Each document is segmented into natural chunks and treated as a verifiable evidence source.
 
 2. Retrieval layer
-   - `Retriever` uses TF-IDF similarity to rank document chunks by question relevance.
-   - This is intentionally lightweight and deterministic, which is appropriate for a compact data set.
+   - `Retriever` uses TF-IDF similarity over the chunk corpus.
+   - This provides fast, deterministic ranking for questions such as mission location, crew member, or surface activity queries.
 
 3. Graph layer
-   - `GraphStore` builds a NetworkX graph of entities and relations such as:
+   - `GraphStore` links missions, locations, and people with typed relationships.
+   - Examples include:
      - `Apollo 11` → `landed_at` → `Sea of Tranquility`
      - `Neil Armstrong` → `walked_on` → `Moon`
-     - `Apollo 13` → `planned_landing_site` → `Fra Mauro`
-   - This allows the system to answer multi-hop and relation-based questions that a single document may not cover fully.
+     - `Apollo 13` → `planned_to_land_at` → `Fra Mauro`
+   - This supports relation-driven questions and multi-hop reasoning such as person → mission → landing site.
 
-4. Answer layer
-   - `ResearchAssistant.answer()` gathers evidence from both sources.
-   - The response structure separates:
+4. Answer generation layer
+   - `ResearchAssistant.answer()` gathers evidence from retrieval and graph lookup.
+   - It avoids unsupported answers by checking whether the requested entity appears in the evidence or graph.
+   - The response payload includes:
+     - `answer`
      - `source_evidence`
      - `graph_relations`
      - `inference`
      - `uncertainty`
      - `contradictions`
+     - `confidence`
 
 ## Why this stack
 
-- `scikit-learn` for fast, local TF-IDF retrieval
-- `networkx` for lightweight graph modeling
-- plain Python for deterministic orchestration
+- `scikit-learn` for local, explainable TF-IDF retrieval
+- `networkx` for compact graph reasoning over mission metadata
+- `requests` for optional OpenAI-compatible API calls
+- Python as the orchestration layer for the end-to-end workflow
 
-This choice is intentional: for a 10–20 document corpus, the main engineering problem is not raw model size, but good prompt design, retrieval quality, graph grounding, and transparent answer boundaries.
+This combination is intentionally lightweight and explainable. In a small knowledge base, the most important engineering challenge is not model size, but retrieval quality, grounding, and the discipline to abstain when the evidence is insufficient.
 
-## Model decisions
+## Real LLM integration
 
-This project does not use a remote LLM API because the dataset is small and the value is in the system design, not in an expensive model call. In a larger system, I would split responsibilities like this:
+The project is designed to support a real OpenAI-compatible model when an API key is configured. The adapter lives in `src/graph_rag_assistant/openai_llm.py` and is used by `LLMAdapter` when `OPENAI_API_KEY` is present.
 
-- embedding model: dense retrieval for semantic matching
-- reranker: improve top-k selection
-- graph/entity extractor: identify mission, person, and location names
-- generative model: produce summaries and structured answers from retrieved context
+Example:
 
-For this demo, the logic is intentionally deterministic and explainable: retrieval and graph lookups do the heavy lifting, while the reasoning layer is kept constrained.
+```powershell
+$env:OPENAI_API_KEY = "your-key"
+$env:PYTHONPATH = "src"
+python -m graph_rag_assistant.cli "Which Apollo mission landed in the Sea of Tranquility?"
+```
 
-## Running the project
+If no API key is set, the system remains usable in a grounded fallback mode and explicitly refuses unsupported claims instead of guessing.
+
+## Getting started
 
 ```bash
 python -m pip install -r requirements.txt
@@ -64,25 +72,31 @@ pytest -q
 python -m graph_rag_assistant.cli "Which Apollo mission landed in the Sea of Tranquility?"
 ```
 
-## Evaluation questions
+## Evaluation set
 
-The project includes a compact evaluation set with 10 questions covering:
+The repository includes a compact evaluation suite in `tests/eval_questions.py` with 10 questions covering:
 
-- simple retrieval
-- multi-document reasoning
-- graph-based relationship checks
-- inference-heavy questions
-- a question with insufficient evidence
+- direct fact retrieval
+- crew and mission relations
+- landing-site questions
+- multi-hop reasoning
+- one intentionally under-supported question
 
-The evaluation file is in `tests/eval_questions.py` and can be run with:
+A representative sample of results is:
 
-```bash
-python tests/eval_questions.py
-```
+- `Which Apollo mission landed in the Sea of Tranquility?` → `Apollo 11`
+- `Who was the first person to walk on the Moon?` → `Neil Armstrong`
+- `Which mission was intended to land in Fra Mauro but did not?` → `Apollo 13`
+- `What is the connection between Neil Armstrong and the Moon?` → `He walked on it during Apollo 11`
+- `What did Apollo 7 do on the far side of the Moon?` → `Insufficient evidence` (expected abstention)
 
-## Key trade-offs
+## Known limitations
 
-- RAG is necessary because the question domain is a knowledge base, not a single fact.
-- The graph is useful for structured relations and multi-hop reasoning, but not required for every question.
-- The system does not blindly trust model output: it always distinguishes concrete source text from inferred interpretation.
-- When the evidence is weak or contradictory, the system is allowed to say that the answer cannot be defended.
+- The corpus is intentionally curated and compact; it is not a full mission encyclopedia.
+- The retrieval layer is lightweight TF-IDF, so it is best suited for controlled domains rather than open-ended web-scale research.
+- The answer generator is grounded, but a real LLM call still depends on the availability of an API key and network access.
+- The project is a demonstration of LLM system design, not a production-grade scientific knowledge engine.
+
+## Deliverable note
+
+This project is intentionally designed as a practical demonstration of how to reason about LLM-based systems in a small repository: retrieval, graph grounding, uncertainty control, evaluation, and transparent generation. The focus is on the engineering pattern rather than on building an extremely large general-purpose system.

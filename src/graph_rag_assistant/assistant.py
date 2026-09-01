@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
@@ -23,21 +24,40 @@ class ResearchAssistant:
         self.llm = LLMAdapter()
 
     def _named_entities_from_question(self, question: str) -> List[str]:
-        normalized = question.lower()
+        q = question.lower()
         entities = []
         for entity in self.graph_store.entities():
-            if entity.lower() in normalized:
+            if entity.lower() in q:
                 entities.append(entity)
-        return entities
+        patterns = [
+            r"Apollo\s+\d+",
+            r"Sea\s+of\s+Tranquility",
+            r"Fra\s+Mauro",
+            r"Ocean\s+of\s+Storms",
+            r"Hadley-Apennine",
+            r"Descartes\s+Highlands",
+            r"Taurus-Littrow",
+            r"Neil\s+Armstrong",
+            r"Ronald\s+Evans",
+            r"Lunar\s+Roving\s+Vehicle",
+        ]
+        for pattern in patterns:
+            matches = re.findall(pattern, question, flags=re.IGNORECASE)
+            for match in matches:
+                entities.append(match.strip())
+        return sorted(set(entities), key=lambda item: (-len(item), item.lower()))
 
     def _entity_is_supported(self, question: str, evidence: List[Tuple[Any, float]]) -> bool:
-        entity_terms = self._named_entities_from_question(question)
-        if not entity_terms:
+        question_terms = self._named_entities_from_question(question)
+        if not question_terms:
             return True
         corpus_text = "\n".join(chunk.text.lower() for chunk, _ in evidence)
-        for term in entity_terms:
-            if term.lower() in corpus_text:
+        for term in question_terms:
+            normalized = term.lower()
+            if normalized in corpus_text:
                 return True
+        if "apollo" in question.lower() and not any("apollo" in chunk.text.lower() for chunk, _ in evidence):
+            return False
         return False
 
     def _get_best_retrieval_score(self, evidence: List[Tuple[Any, float]]) -> float:
@@ -47,20 +67,47 @@ class ResearchAssistant:
 
     def answer(self, question: str) -> Dict[str, Any]:
         evidence = self.retriever.retrieve(question, top_k=4, score_threshold=0.08)
-        question_entities = self._named_entities_from_question(question)
-        supported = self._entity_is_supported(question, evidence)
-        if not supported and evidence:
-            evidence = []
-
         graph_results = self.graph_store.query(question)
-        if graph_results and not self._graph_entity_supported(question, graph_results):
-            graph_results = []
+        direct_facts = self._source_facts(evidence)
+        direct_text = "\n".join(item["text"].lower() for item in direct_facts)
+        question_terms = self._named_entities_from_question(question)
 
-        best_score = self._get_best_retrieval_score(evidence)
-        abstain = best_score < 0.12 and not graph_results
-        is_clear_mismatch = bool(question_entities) and not supported and not graph_results
+        mission_matches = re.findall(r"apollo\s+\d+", question, flags=re.IGNORECASE)
+        corpus_text = "\n".join(chunk.text.lower() for chunk, _ in evidence)
+        graph_text = "\n".join(
+            f"{str(result.get('source', '')).lower()} {str(result.get('target', '')).lower()}"
+            for result in graph_results
+        )
+        for mission in mission_matches:
+            mission_lower = mission.lower()
+            if mission_lower not in corpus_text and mission_lower not in graph_text:
+                return {
+                    "answer": "Insufficient evidence to answer this confidently.",
+                    "source_evidence": direct_facts,
+                    "graph_relations": graph_results,
+                    "inference": "The referenced Apollo mission is not present in the corpus or graph, so the answer must be withheld.",
+                    "uncertainty": True,
+                    "contradictions": [],
+                    "confidence": 0.0,
+                }
 
-        if not evidence and not graph_results or abstain or is_clear_mismatch:
+        if question_terms and not any(term.lower() in direct_text for term in question_terms):
+            if not graph_results or not any(
+                term.lower() in str(result.get("source", "")).lower() or term.lower() in str(result.get("target", "")).lower()
+                for term in question_terms
+                for result in graph_results
+            ):
+                return {
+                    "answer": "Insufficient evidence to answer this confidently.",
+                    "source_evidence": direct_facts,
+                    "graph_relations": graph_results,
+                    "inference": "The requested entity is not supported by the retrieved corpus or graph.",
+                    "uncertainty": True,
+                    "contradictions": [],
+                    "confidence": 0.0,
+                }
+
+        if not evidence and not graph_results:
             return {
                 "answer": "Insufficient evidence to answer this confidently. The system could not find a reliable match in the document corpus or the graph.",
                 "source_evidence": [],
@@ -71,7 +118,22 @@ class ResearchAssistant:
                 "confidence": 0.0,
             }
 
-        direct_facts = self._source_facts(evidence)
+        if not evidence and graph_results:
+            evidence = []
+
+        best_score = self._get_best_retrieval_score(evidence)
+        abstain = best_score < 0.12 and not graph_results
+        if abstain:
+            return {
+                "answer": "Insufficient evidence to answer this confidently.",
+                "source_evidence": direct_facts,
+                "graph_relations": graph_results,
+                "inference": "The lexical similarity is too weak to support a reliable answer.",
+                "uncertainty": True,
+                "contradictions": [],
+                "confidence": 0.0,
+            }
+
         llm_payload = self.llm.generate_structured_answer(question, direct_facts, graph_results, uncertainty=False)
         contradiction_checks = self._detect_contradictions(question, direct_facts)
 
