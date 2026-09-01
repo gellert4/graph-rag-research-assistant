@@ -72,6 +72,21 @@ class ResearchAssistant:
         direct_text = "\n".join(item["text"].lower() for item in direct_facts)
         question_terms = self._named_entities_from_question(question)
 
+        # Multi-hop context is included when relevant entities are present in the graph.
+        multi_hop_context = []
+        for term in question_terms:
+            if term in self.graph_store.graph:
+                multi_hop_context.extend(self.graph_store.query_related(term, max_depth=2))
+        if multi_hop_context:
+            graph_results = graph_results + [
+                {"source": src, "relation": rel, "target": dst, "evidence": "multi-hop graph traversal"}
+                for src, rel, dst in multi_hop_context
+                if not any(
+                    result.get("source") == src and result.get("relation") == rel and result.get("target") == dst
+                    for result in graph_results
+                )
+            ]
+
         mission_matches = re.findall(r"apollo\s+\d+", question, flags=re.IGNORECASE)
         corpus_text = "\n".join(chunk.text.lower() for chunk, _ in evidence)
         graph_text = "\n".join(
