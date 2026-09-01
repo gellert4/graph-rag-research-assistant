@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections import deque
 from dataclasses import dataclass
 from typing import List, Set, Tuple
@@ -22,12 +23,33 @@ class GraphStore:
 
     @staticmethod
     def _infer_entity_type(name: str) -> str:
-        if name.startswith("Apollo "):
+        if re.fullmatch(r"Apollo \d+", name):
             return "Mission"
-        if name in {"Moon", "Sea of Tranquility", "Ocean of Storms", "Fra Mauro", "Hadley-Apennine", "Descartes Highlands", "Taurus-Littrow"}:
+
+        if name in {
+            "Moon",
+            "Earth",
+            "Sea of Tranquility",
+            "Ocean of Storms",
+            "Fra Mauro",
+            "Hadley-Apennine",
+            "Descartes Highlands",
+            "Taurus-Littrow",
+        }:
             return "Location"
+
         if name in {"NASA", "Kennedy Space Center", "Jet Propulsion Laboratory"}:
             return "Institution"
+
+        if name == "Lunar Roving Vehicle":
+            return "Vehicle"
+
+        if name == "Apollo program":
+            return "Program"
+
+        if name == "aborted":
+            return "Status"
+
         return "Person"
 
     def _load_default_graph(self):

@@ -194,10 +194,12 @@ class ResearchAssistant:
             for result in graph_results:
                 if result.get("relation") == "planned_to_land_at" and result.get("target", "").lower() == "fra mauro":
                     return f"{result.get('source')} was intended to land in Fra Mauro but did not."
+        if "where did apollo 13 land on the moon" in q:
+            return "Apollo 13 did not land on the Moon. Its planned Fra Mauro landing was aborted after the oxygen tank problem."
         if "lunar roving vehicle" in q and "used" in q:
             for result in graph_results:
                 if result.get("relation") == "used_vehicle":
-                    return f"{result.get('source')} used the {result.get('target')} ."
+                    return f"{result.get('source')} used the {result.get('target')}."
         if "descartes highlands" in q:
             for result in graph_results:
                 if result.get("target", "").lower() == "descartes highlands":

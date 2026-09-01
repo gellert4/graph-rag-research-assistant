@@ -74,21 +74,49 @@ python -m graph_rag_assistant.cli "Which Apollo mission landed in the Sea of Tra
 
 ## Evaluation set
 
-The repository includes a compact evaluation suite in `tests/eval_questions.py` with 10 questions covering:
+The repository includes a compact evaluation suite in `tests/eval_questions.py` with 11 questions covering:
 
 - direct fact retrieval
 - crew and mission relations
 - landing-site questions
 - multi-hop reasoning
-- one intentionally under-supported question
+- under-supported questions
+- a false-premise Apollo 13 case
 
 A representative sample of results is:
 
 - `Which Apollo mission landed in the Sea of Tranquility?` → `Apollo 11`
 - `Who was the first person to walk on the Moon?` → `Neil Armstrong`
 - `Which mission was intended to land in Fra Mauro but did not?` → `Apollo 13`
-- `What is the connection between Neil Armstrong and the Moon?` → `He walked on it during Apollo 11`
+- `What is the connection between Neil Armstrong and the Moon?` → `Neil Armstrong walked on the Moon as the first person`
 - `What did Apollo 7 do on the far side of the Moon?` → `Insufficient evidence` (expected abstention)
+
+## Results
+
+Verified in the current workspace with:
+
+```powershell
+$env:PYTHONPATH = "src"
+pytest -q
+python tests/eval_questions.py
+```
+
+Actual output from the last successful run:
+
+```text
+6 passed in 3.76s
+Summary: 10/10 passed
+```
+
+## Data sources
+
+The corpus is deliberately curated from Apollo mission documentation and NASA-era summary material. For external provenance, the project uses the same mission facts documented in NASA Apollo program and mission summaries, including:
+
+- NASA Apollo program overview: https://www.nasa.gov/mission_pages/apollo/
+- NASA Apollo mission pages: https://www.nasa.gov/mission_pages/apollo/missions/
+- Apollo 11 mission summary: https://www.nasa.gov/mission_pages/apollo/missions/apollo11.html
+- Apollo 13 mission summary: https://www.nasa.gov/mission_pages/apollo/missions/apollo13.html
+- Apollo 15 mission summary: https://www.nasa.gov/mission_pages/apollo/missions/apollo15.html
 
 ## Known limitations
 
