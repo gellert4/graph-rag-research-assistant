@@ -1,0 +1,4 @@
+networkx>=3.3
+scikit-learn>=1.5
+numpy>=1.26
+pandas>=2.2
